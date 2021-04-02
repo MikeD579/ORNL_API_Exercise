@@ -1,0 +1,7 @@
+CREATE DATABASE batch_jobs
+USE batch_jobs
+CREATE TABLE batch (
+	batch_number INT PRIMARY KEY,
+	submitted_at DATETIME,
+	nodes_used INT
+);

@@ -2,6 +2,7 @@
 # then it will take out any rows missing data. Finally, it will
 # load the corected data into a MySQL DB.
 import sys
+import sqlite3
 
 def get_data():
     # This is the array to send to MySQL database
