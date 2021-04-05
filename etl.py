@@ -4,37 +4,34 @@
 import re
 import sqlite3
 import sys
-
-DB = 'batch_jobs.db'
+ 
 # Connect to the DB and create a cursor object
+DB = 'batch_jobs.db'
 CON = sqlite3.connect(DB)
 CUR = CON.cursor()
 OMITTED = []
-def get_data():
-    # This is the array to send to MySQL database
-    fout = []
+
+def load_data():
+    # Open the file passed in form terminal, and check the values
     with open(sys.argv[1], 'r') as fin:
         for line in fin:
             line = line.strip();
-            check_element = line.split(',')
+            elements = line.split(',')
             add_line = True
-            command = 'INSERT INTO batch VALUES ('
-     
-
-            # check to see if any elements are missing, if they are
+ 
+            # Check to see if any elements are missing, if they are
             # dont add the line to the new csv file 
-            for element in check_element:
-                if element == '':
+            for e in elements:
+                if e == '':
                     add_line = False
             if add_line:
-                command += check_element[0] + ",'" + check_element[1] + "'," + check_element[2] + ")"
-                CUR.execute(command)
+                # Insert the line into the DB
+                CUR.execute('INSERT INTO batch VALUES(?,?,?)', (elements[0], "'" + elements[1] + "'", elements[2]))
             else:
+                # Omittes line will be printed out at end of program
                 OMITTED.append(line)
+        # After all lines have been itterated through commit to DB
         CON.commit()
-    return fout
-
-# This populates the DB with all data containing all elements
 
 if __name__ == '__main__':
     # Simple error handling
@@ -47,6 +44,10 @@ if __name__ == '__main__':
         CON.close()
         exit(1)
 
-    get_data()
+    # If no error, then load the data into the database
+    load_data()
     print('Loaded', sys.argv[1], 'into', DB)
+    print('Lines omitted')
+    for e in OMITTED:
+        print (e)
     CON.close()
