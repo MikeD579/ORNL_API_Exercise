@@ -1,74 +1,78 @@
-from flask import Flask, jsonify, request, url_for
+from datetime import datetime, MAXYEAR, MINYEAR
+from flask import Flask, jsonify, render_template, request
+import re
 import sqlite3
 app = Flask(__name__)
 
-# Builds the query and formats response to get ready to jsonify
-def query(filters):
+# Sets a root endpoint
+@app.route('/')
+def root():
+    return render_template('index.html')
+
+# Builds the query and formats a json response
+@app.route('/batch_jobs/')
+def batch_jobs():
     con = sqlite3.connect('batch_jobs.db')
     cur = con.cursor()
 
-    build_query = ' SELECT * FROM batch WHERE 1'
-
+    # request.agrs retruns a dictionary that contains the filters
+    filters = request.args
+    
+    build_query = 'SELECT * FROM batch WHERE 1'
     for key in filters:
-        # delet later
-        print(key, filters[key])
+        value = filters[key]
         if key == 'filter[submitted_after]':
+            #TODO regex check for datetime
             build_query += ' AND submitted_at >= ' + filters[key]
         elif key == 'filter[submitted_before]':
             build_query += ' AND submitted_at <= ' + filters[key]
         elif key == 'filter[min_nodes]':
-            build_query += ' AND nodes_used >= ' + filters[key]
+            try:
+                if isinstance(int(filters[key], int)):
+                    build_query += ' AND nodes_used >= ' + filters[key]
+            except:
+                print('ERROR: not an int')
         elif key == 'filter[max_nodes]':
-            build_query += ' AND nodes_used <= ' + filters[key]
+            try:
+                if isinstance(int(filters[key], int)):
+                    build_query += ' AND nodes_used <= ' + filters[key]
+            except:
+                print('ERROR: not an int')
         else:
-            return ('Something has gone wrong. I cannot filter ' + key)
+            return ('Something has gone wrong. Cannot query ' + key + '=' + value + '<br>Check to see if the value is wrong.')
     build_query += ';'
-    cur.execute(build_query)
-    # Returns a list of n-tuples, in our case a 3-tuple (batch #, datetime, nodes)
+
+    # Sends query to the DB
+    try:
+        cur.execute(build_query)
+    except e:
+        return render_template('404.html')
+    # rows = a list of 3-tuples (batch_number, submitted_at, nodes_used)
     rows = cur.fetchall()
     
-    # Creating a dictionary to return
+    # Builds the JSON structure form the bottom up
     data = []
-    for n,r in enumerate(rows):
-        attributes = {
-            'batch_number': r[0],
-            'submitted_at': r[1],
-            'nodes_used': r[2]
-        }
+    if len(rows) > 0:
+        for n,r in enumerate(rows):
+            attributes = {
+                'batch_number': r[0],
+                'submitted_at': r[1],
+                'nodes_used': r[2]
+            }
+            data_values = {
+                'type': 'articles',
+                'id': str(n+1),
+                'attributes': attributes
+            }
+            data.append(data_values)
+    else:
+        data = None
 
-        data_values = {
-            'type': 'articles',
-            'id': str(n+1),
-            'attributes': attributes
-        }
-
-        data.append(data_values)
+    links = {'self': request.url}
+    json_str = {'links': links, 'data': data}
 
     con.close()
-    return data
-
-def format_json(data):
-    links = {
-        'self': request.url,
-    }
-    
-    json_str = {
-        'links': links,
-        'data': data
-    }
-
-    return json_str
-    
-
-@app.route('/batch_jobs/')
-def batch_jobs():
-    # The dictionary that will be built and converted as a JSON
-    # request.args returns a dictionary with the form filters
-    # query will return a list a dictionary with the values for the JSON data field
-    data = query(request.args)
-    return jsonify(format_json(data))
-    #return complete_json 
-    #jsonify({"links": { "self": "http://localhost:5000/batch_jobs"}})
+    return jsonify(json_str)
 
 if __name__ == '__main__':
     app.run(debug=True)
