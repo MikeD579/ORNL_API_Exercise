@@ -15,7 +15,7 @@ def load_data():
     # Open the file passed in form terminal, and check the values
     with open(sys.argv[1], 'r') as fin:
         for line in fin:
-            line = line.strip();
+            line = line.strip()
             elements = line.split(',')
             add_line = True
  
@@ -26,7 +26,9 @@ def load_data():
                     add_line = False
             if add_line:
                 # Insert the line into the DB
-                CUR.execute('INSERT INTO batch VALUES(?,?,?)', (elements[0], "'" + elements[1] + "'", elements[2]))
+                datetime = elements[1].split('+')[0]
+                print (datetime)
+                CUR.execute('INSERT INTO batch VALUES(?,?,?)', (elements[0], datetime, elements[2]))
             else:
                 # Omittes line will be printed out at end of program
                 OMITTED.append(line)
