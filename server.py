@@ -1,14 +1,15 @@
+# This is the API connection from the URL endpoint to the database.
 from flask import Flask, jsonify, render_template, request
-import re
 import sqlite3
 app = Flask(__name__)
 
-# Sets a root endpoint
+# Sets a root endpoint and servers a index.html
 @app.route('/')
 def root():
     return render_template('index.html')
 
-# Builds the query and formats a json response
+# When the endpoint /batch_jobs is called the API with handle
+# queries with a list of filters, then return a dictionary 
 @app.route('/batch_jobs/')
 def batch_jobs():
     con = sqlite3.connect('batch_jobs.db')
@@ -20,21 +21,25 @@ def batch_jobs():
 
     for key in filters:
         value = filters[key]
+        # Check each filter to see if its right
         if key == 'filter[submitted_after]':
+            # SQLite cannot handle timezones. Therefore, because the 
+            # data is all in the same timezone, we can remove the timezone
+            # TODO convert the timezone if needed
             datetime = value.split()[0] + "'"
-            print(value)
-            print(datetime)
             build_query += " AND datetime(submitted_at) >= datetime(" + datetime + ")"
         elif key == 'filter[submitted_before]':
             datetime = value.split()[0] + "'"
             build_query += " AND datetime(submitted_at) <= datetime(" + datetime + ")"
         elif key == 'filter[min_nodes]':
+            # Check if it is an int or a literal
             try:
                 if isinstance(int(value), int):
                     build_query += ' AND nodes_used >= ' + value
             except:
                 print('ERROR: not an int')
         elif key == 'filter[max_nodes]':
+            # Check if it is an int or a literal
             try:
                 if isinstance(int(value), int):
                     build_query += ' AND nodes_used <= ' + value
@@ -44,13 +49,13 @@ def batch_jobs():
             return ('Something has gone wrong. Cannot query ' + key + '=' + value + '<br>Check to see if the value is wrong.')
     build_query += ';'
 
-    print (build_query)
     # Sends query to the DB
     try:
         cur.execute(build_query)
     except Exception as e:
         print(e)
         return render_template('404.html')
+
     # rows = a list of 3-tuples (batch_number, submitted_at, nodes_used)
     rows = cur.fetchall()
     
