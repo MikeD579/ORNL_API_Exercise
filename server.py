@@ -69,7 +69,7 @@ def batch_jobs():
                 'nodes_used': r[2]
             }
             data_values = {
-                'type': 'articles',
+                'type': 'batch_jobs',
                 'id': str(n+1),
                 'attributes': attributes
             }
